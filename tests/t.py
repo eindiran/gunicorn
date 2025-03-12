@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -
 # Copyright 2009 Paul J. Davis <paul.joseph.davis@gmail.com>
 #
 # This file is part of gunicorn released under the MIT license.
@@ -22,19 +21,19 @@ def data_source(fname):
         return buf
 
 
-class request(object):
+class request:
     def __init__(self, name):
         self.fname = os.path.join(dirname, "requests", name)
 
     def __call__(self, func):
         def run():
             src = data_source(self.fname)
-            func(src, RequestParser(src, None))
+            func(src, RequestParser(src, None, None))
         run.func_name = func.func_name
         return run
 
 
-class FakeSocket(object):
+class FakeSocket:
 
     def __init__(self, data):
         self.tmp = tempfile.TemporaryFile()
