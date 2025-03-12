@@ -2,127 +2,75 @@
 Changelog
 =========
 
-20.0.4 / 2019/11/26
+23.0.0 - 2024-08-10
 ===================
 
-- fix binding a socket using the file descriptor
-- remove support for the `bdist_rpm` build
+- minor docs fixes (:pr:`3217`, :pr:`3089`, :pr:`3167`)
+- worker_class parameter accepts a class (:pr:`3079`)
+- fix deadlock if request terminated during chunked parsing (:pr:`2688`)
+- permit receiving Transfer-Encodings: compress, deflate, gzip (:pr:`3261`)
+- permit Transfer-Encoding headers specifying multiple encodings. note: no parameters, still (:pr:`3261`)
+- sdist generation now explicitly excludes sphinx build folder (:pr:`3257`)
+- decode bytes-typed status (as can be passed by gevent) as utf-8 instead of raising `TypeError` (:pr:`2336`)
+- raise correct Exception when encounting invalid chunked requests (:pr:`3258`)
+- the SCRIPT_NAME and PATH_INFO headers, when received from allowed forwarders, are no longer restricted for containing an underscore (:pr:`3192`)
+- include IPv6 loopback address ``[::1]`` in default for :ref:`forwarded-allow-ips` and :ref:`proxy-allow-ips` (:pr:`3192`)
 
-20.0.3 / 2019/11/24
+** NOTE **
+
+- The SCRIPT_NAME change mitigates a regression that appeared first in the 22.0.0 release
+- Review your :ref:`forwarded-allow-ips` setting if you are still not seeing the SCRIPT_NAME transmitted
+- Review your :ref:`forwarder-headers` setting if you are missing headers after upgrading from a version prior to 22.0.0
+
+** Breaking changes **
+
+- refuse requests where the uri field is empty (:pr:`3255`)
+- refuse requests with invalid CR/LR/NUL in heade field values (:pr:`3253`)
+- remove temporary ``--tolerate-dangerous-framing`` switch from 22.0 (:pr:`3260`)
+- If any of the breaking changes affect you, be aware that now refused requests can post a security problem, especially so in setups involving request pipe-lining and/or proxies.
+
+22.0.0 - 2024-04-17
 ===================
 
-- fixed load of a config file without a Python extension
-- fixed `socketfromfd.fromfd` when defaults are not set
+- use `utime` to notify workers liveness 
+- migrate setup to pyproject.toml
+- fix numerous security vulnerabilities in HTTP parser (closing some request smuggling vectors)
+- parsing additional requests is no longer attempted past unsupported request framing
+- on HTTP versions < 1.1 support for chunked transfer is refused (only used in exploits)
+- requests conflicting configured or passed SCRIPT_NAME now produce a verbose error
+- Trailer fields are no longer inspected for headers indicating secure scheme
+- support Python 3.12
 
-.. note:: we now warn when we load a config file without Python Extension
+** Breaking changes **
 
-20.0.2 / 2019/11/23
-===================
-
-- fix changelog
-
-20.0.1 / 2019/11/23
-===================
-
-- fixed the way the config module is loaded. `__file__` is now available
-- fixed `wsgi.input_terminated`. It is always true.
-- use the highest protocol version of openssl by default
-- only support Python >= 3.5
-- added `__repr__` method to `Config` instance
-- fixed support of AIX platform and musl libc in  `socketfromfd.fromfd` function
-- fixed support of applications loaded from a factory function
-- fixed chunked encoding support to prevent any `request smuggling <https://portswigger.net/research/http-desync-attacks-request-smuggling-reborn>`_
-- Capture os.sendfile before patching in gevent and eventlet workers.
-  fix `RecursionError`.
-- removed locking in reloader when adding new files
-- load the WSGI application before the loader to pick up all files
-
-.. note:: this release add official support for applications loaded from a factory function
-   as documented in Flask and other places.
+- minimum version is Python 3.7
+- the limitations on valid characters in the HTTP method have been bounded to Internet Standards
+- requests specifying unsupported transfer coding (order) are refused by default (rare)
+- HTTP methods are no longer casefolded by default (IANA method registry contains none affected)
+- HTTP methods containing the number sign (#) are no longer accepted by default (rare)
+- HTTP versions < 1.0 or >= 2.0 are no longer accepted by default (rare, only HTTP/1.1 is supported)
+- HTTP versions consisting of multiple digits or containing a prefix/suffix are no longer accepted
+- HTTP header field names Gunicorn cannot safely map to variables are silently dropped, as in other software
+- HTTP headers with empty field name are refused by default (no legitimate use cases, used in exploits)
+- requests with both Transfer-Encoding and Content-Length are refused by default (such a message might indicate an attempt to perform request smuggling)
+- empty transfer codings are no longer permitted (reportedly seen with really old & broken proxies)
 
 
-19.10.0 / 2019/11/23
-====================
+** SECURITY **
 
-- unblock select loop during reload of a sync worker
-- security fix: http desync attack
-- handle `wsgi.input_terminated`
-- added support for str and bytes in unix  socket addresses
-- fixed `max_requests` setting
-- headers values are now encoded as LATN1, not ASCII
-- fixed `InotifyReloadeder`:  handle `module.__file__` is None
-- fixed compatibility with tornado 6
-- fixed root logging
-- Prevent removalof unix sockets from `reuse_port`
-- Clear tornado ioloop before os.fork
-- Miscellaneous fixes and improvement for linting using Pylint
-
-20.0 / 2019/10/30
-=================
-
-- Fixed `fdopen` `RuntimeWarning` in Python 3.8
-- Added  check and exception for str type on value in Response process_headers method.
-- Ensure WSGI header value is string before conducting regex search on it.
-- Added pypy3 to list of tested environments
-- Grouped `StopIteration` and `KeyboardInterrupt` exceptions with same body together in Arbiter.run()
-- Added `setproctitle` module to `extras_require` in setup.py
-- Avoid unnecessary chown of temporary files
-- Logging: Handle auth type case insensitively
-- Removed `util.import_module`
-- Removed fallback for `types.SimpleNamespace` in tests utils
-- Use `SourceFileLoader` instead instead of `execfile_`
-- Use `importlib` instead of `__import__` and eval`
-- Fixed eventlet patching
-- Added optional `datadog <https://www.datadoghq.com>`_ tags for statsd metrics
-- Header values now are encoded using latin-1, not ascii.
-- Rewritten `parse_address` util added test
-- Removed redundant super() arguments
-- Simplify `futures` import in gthread module
-- Fixed worker_connections` setting to also affects the Gthread worker type
-- Fixed setting max_requests
-- Bump minimum Eventlet and Gevent versions to 0.24 and 1.4
-- Use Python default SSL cipher list by default
-- handle `wsgi.input_terminated` extension
-- Simplify Paste Deployment documentation
-- Fix root logging: root and logger are same level.
-- Fixed typo in ssl_version documentation
-- Documented  systemd deployement unit examples
-- Added systemd sd_notify support
-- Fixed typo in gthread.py
-- Added `tornado <https://www.tornadoweb.org/>`_ 5 and  6 support
-- Declare our setuptools dependency
-- Added support to `--bind` to open file descriptors
-- Document how to serve WSGI app modules from Gunicorn
-- Provide guidance on X-Forwarded-For access log in documentation
-- Add support for named constants in the `--ssl-version` flag
-- Clarify log format usage of header & environment in documentation
-- Fixed systemd documentation to properly setup gunicorn unix socket
-- Prevent removal unix socket for reuse_port
-- Fix `ResourceWarning` when reading a Python config module
-- Remove unnecessary call to dict keys method
-- Support str and bytes for UNIX socket addresses
-- fixed `InotifyReloadeder`:  handle `module.__file__` is None
-- `/dev/shm` as a convenient alternative to making your own tmpfs mount in fchmod FAQ
-- fix examples to work on python3
-- Fix typo in `--max-requests` documentation
-- Clear tornado ioloop before os.fork
-- Miscellaneous fixes and improvement for linting using Pylint
-
-Breaking Change
-+++++++++++++++
-
-- Removed gaiohttp worker
-- Drop support for Python 2.x
-- Drop support for EOL Python 3.2 and 3.3
-- Drop support for Paste Deploy server blocks
-
+- fix CVE-2024-1135
 
 History
 =======
 
 .. toctree::
    :titlesonly:
-
+   
+   2024-news
+   2023-news
+   2021-news
+   2020-news
+   2019-news
    2018-news
    2017-news
    2016-news
@@ -132,3 +80,4 @@ History
    2012-news
    2011-news
    2010-news
+
